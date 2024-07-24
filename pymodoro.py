@@ -1,4 +1,4 @@
-# V 1.01
+# V 1.05
 # Proudly written on termux in vim like a Cool Guy
 ## addendum: I have regrets
 
@@ -29,6 +29,15 @@ def finish(delay=2.211):
     play_sound()
 
 
+def oneBreak(length=timeBreak):
+    for seconds in range(int(length.seconds)):
+        os.system('clear')
+        timeLeft = length - dt.timedelta(seconds=seconds)
+        print(timeLeft, 'left in break')
+        time.sleep(1)
+    play_sound()
+
+
 def oneSlice(length=timeSlice):
     for seconds in range(int(length.seconds)):
         os.system('clear')
@@ -36,17 +45,15 @@ def oneSlice(length=timeSlice):
         print(timeLeft, 'left in slice')
         time.sleep(1)
     play_sound()
-    for seconds in range(int(timeBreak.seconds)):
-        os.system('clear')
-        timeLeft = timeBreak - dt.timedelta(seconds=seconds)
-        print(timeLeft, 'left in break')
-        time.sleep(1)
-    play_sound()
+    
 
 
 def block(slices=slicesPerBlock):
-    for i in range(slices):
+    for i in range(slices - 1):
         oneSlice()
+        oneBreak()
+    # Special case for last slice of block
+    oneSlice()
     finish()
     
 

@@ -1,4 +1,4 @@
-# V 1.0
+# V 1.01
 # Proudly written on termux in vim like a Cool Guy
 ## addendum: I have regrets
 
@@ -55,6 +55,8 @@ while True:
     print('\nEnter blank for single slice, any other character for full block:')
     choice = input()
 
+    os.system('termux-wake-lock')
+
     # Only one slice
     if choice == '':
         oneSlice()
@@ -62,3 +64,5 @@ while True:
     # Full block
     else:
         block()
+
+    os.system('termux-wake-unlock')

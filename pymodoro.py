@@ -5,6 +5,9 @@
 import os
 import datetime as dt
 import time
+import pathlib
+
+PATH = str(pathlib.Path(__file__).parent.resolve())
 
 volumeSteps = (50, 40, 30, 20, 15, 10, 5, 0)
 volumeLvl = 3   # 0-7
@@ -15,7 +18,7 @@ slicesPerBlock = 4
 
 
 def play_sound(volume=volumeLvl):
-    file = f'./neg{volumeSteps[volume]}.mp3'
+    file = f'{PATH}/neg{volumeSteps[volume]}.mp3'
     os.system(f'play-audio -s notification {file} &')
 
 

@@ -7,10 +7,10 @@ ver = 1.10
 ###################################
 # Standard modules
 import pathlib
-import sys
 import os
 import datetime as dt
 import time
+import curses
 
 # Custom modules
 
@@ -30,7 +30,6 @@ VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
 
 # Variables
 ###################################
-
 volumeLvl = 3   # 0-7, according to VOLUMESTEPS
 
 timeSlice = dt.timedelta(minutes=25)
@@ -127,6 +126,7 @@ while True:
     # Only one slice
     if choice == '':
         oneSlice()
+        oneBreak()
     
     # Full block
     else:

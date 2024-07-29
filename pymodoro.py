@@ -25,6 +25,8 @@ import traceback
 # Constants
 ################################### 
 PATH = str(pathlib.Path(__file__).parent.resolve())
+SCREENWIDTH     = 83    # These are magic num-
+SCREENHEIGHT    = 43    ##  bers for *my* phone
 START_MOUSE_CAPTURE   = '\033[?1003h'
 STOP_MOUSE_CAPTURE    = '\033[?1003l'
 VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
@@ -32,6 +34,7 @@ DEFAULT_VOLUME_LEVEL = 3 # 0-7, according to VOLUMESTEPS
 DEFAULT_TIME_SLICE = dt.timedelta(minutes=25)
 DEFAULT_TIME_BREAK = dt.timedelta(minutes=5)
 DEFAULT_SLICES_PER_BLOCK = 4
+DEFAULT_SILENT = False
 ##############consts###############
 
 
@@ -81,16 +84,16 @@ class Setting():
         curses.curs_set(1)
         curses.mousemask(0)
         curses.echo(True)
-        choice = int(self.window.getstr())
+        choice = self.window.getstr()
         curses.echo(False)
         curses.mousemask(
             curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
         curses.curs_set(0)
-        #!!! (1)Can do this by checking previous type, no need for extra var!
-        if self.whatType == dt.timedelta:
-            self.value = dt.timedelta(minutes=choice)
+        oldType = type(self.value)
+        if oldType == dt.timedelta:
+            self.value = dt.timedelta(minutes=float(choice))
         else:
-            self.value = choice
+            self.value = oldType(choice)
         self.print_content()
         
 
@@ -102,12 +105,12 @@ class Setting():
 
 #%% Functions
 ###################################
-distWindows = 2
+distWindows = 0
 
 settingsList = []
 def setting_factory(value, text, whatType):
     heightWindows = 5
-    widthWindows = 50
+    widthWindows = 35
     y, x = 0, 0
     heightOffset = (heightWindows + distWindows) * len(settingsList)
     newSetting = Setting(value, text, whatType, (y+heightOffset, x),
@@ -200,6 +203,7 @@ def block(slices):
 try:
     # Initialize curses
     stdscr = curses.initscr()
+    stdscr = curses.newwin(SCREENHEIGHT, SCREENWIDTH, 0, 0) #!!!
     stdscr.keypad(True)
     curses.echo(False)
     curses.start_color()
@@ -218,7 +222,9 @@ try:
     slicesPerBlock = setting_factory(DEFAULT_SLICES_PER_BLOCK, 
                              'Slices per block: %setting', whatType=int)
     volumeLvl = setting_factory(DEFAULT_VOLUME_LEVEL,
-                                'Volume level(0-7): %setting', whatType=int)  
+                                'Volume level(0-7): %setting', whatType=int)
+    silentMode = setting_factory(DEFAULT_SILENT,
+                                 'Silent mode: %setting', whatType=bool)
     
     # Settings sub-windows
     

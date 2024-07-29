@@ -29,8 +29,8 @@ START_MOUSE_CAPTURE   = '\033[?1003h'
 STOP_MOUSE_CAPTURE    = '\033[?1003l'
 VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
 DEFAULT_VOLUME_LEVEL = 3 # 0-7, according to VOLUMESTEPS
-DEFAULT_TIME_SLICE = dt.timedelta(minutes=25)
-DEFAULT_TIME_BREAK = dt.timedelta(minutes=5)
+DEFAULT_TIME_SLICE = dt.timedelta(seconds=3)
+DEFAULT_TIME_BREAK = dt.timedelta(seconds=3)
 DEFAULT_SLICES_PER_BLOCK = 4
 ##############consts###############
 
@@ -178,7 +178,7 @@ def block(slices):
     # Special case for last slice of block
     blockWin.clear()
     blockWin.border()
-    blockWin.addstr(0, 2, f'Slice {4} of {slices}')
+    blockWin.addstr(0, 2, f'Slice {slices} of {slices}')
     blockWin.refresh()
     oneSlice(timeSlice.value)
     finish()
@@ -232,7 +232,6 @@ try:
     nameInput = choice
     inputWin.clear()
     inputWin.border()
-    inputWin.addstr(1, 1, str(nameInput))
     inputWin.addstr(2, 1, 'Enter blank for single slice,')
     inputWin.addstr(3, 1, 'any other character for full block: ')
     inputWin.refresh()
@@ -244,7 +243,7 @@ try:
         settings_menu()
         inputWin.clear()
         inputWin.border()
-        # inputWin.addstr(1, 1, str(nameInput))
+        inputWin.addstr(1, 1, str(nameInput)) #!!!
         inputWin.addstr(2, 1, 'Hit return for single slice,')
         inputWin.addstr(3, 1, 'any other character for full block: ')
         inputWin.refresh()
@@ -263,6 +262,9 @@ try:
                     break
         
         else:
+            inputWin.addstr(1, 1, str(choice)) #!!!
+            inputWin.refresh()
+            stdscr.refresh()
             os.system('termux-wake-lock')
         
             # Only one slice

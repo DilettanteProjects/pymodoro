@@ -150,6 +150,7 @@ def play_sound(volume, silent):
 def send_notification(content):
     title = 'pymodoro'
     notifId = 'pymodoro'
+    content = f"'{content}'"
     args =  f' -t {title}' +\
             f' -c {content}' +\
             f' -i {notifId}' +\

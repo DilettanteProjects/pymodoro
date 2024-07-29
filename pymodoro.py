@@ -261,7 +261,7 @@ try:
                     window.edit()
                     break
         
-        else:
+        elif choice != 'KEY_RESIZE':
             inputWin.addstr(1, 1, str(choice)) #!!!
             inputWin.refresh()
             stdscr.refresh()

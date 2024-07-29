@@ -61,10 +61,9 @@ class BorderWindow():
 
 
 class Setting():
-    def __init__(self, value, text, whatType, ul:tuple, height, width):
+    def __init__(self, value, text, ul:tuple, height, width):
         self.value = value
         self.text = text
-        self.whatType = whatType
         self.ul = ul
         self.height = height
         self.width = width
@@ -108,7 +107,7 @@ class Setting():
 distWindows = 0
 
 settingsList = []
-def setting_factory(value, text, whatType):
+def setting_factory(value, text):
     rowsPerColumn = 4
     heightWindows = 5
     widthWindows = 35
@@ -120,7 +119,7 @@ def setting_factory(value, text, whatType):
         x = widthWindows
         rowsThisColumn = len(settingsList) - rowsPerColumn
     heightOffset = (heightWindows + distWindows) * rowsThisColumn
-    newSetting = Setting(value, text, whatType, (y+heightOffset, x),
+    newSetting = Setting(value, text, (y+heightOffset, x),
                    heightWindows, widthWindows)
     settingsList.append(newSetting)
     return newSetting
@@ -147,6 +146,9 @@ def play_sound(volume, silent):
                 time.sleep(ms / 1000)
             i += 1
         
+
+def send_notification(text):
+    pass
 
 
 def finish(delay=2.211):
@@ -232,19 +234,16 @@ try:
     
     # Initialize settings      
     timeSlice = setting_factory(DEFAULT_TIME_SLICE,
-                                'Time per slice: %setting Minutes', 
-                        whatType=dt.timedelta)
+                                'Time per slice: %setting Minutes')
     timeBreak = setting_factory(DEFAULT_TIME_BREAK,
-                                'Time per break: %setting Minutes',
-                                whatType=dt.timedelta)
+                                'Time per break: %setting Minutes')
     slicesPerBlock = setting_factory(DEFAULT_SLICES_PER_BLOCK, 
-                             'Slices per block: %setting', whatType=int)
+                             'Slices per block: %setting')
     volumeLvl = setting_factory(DEFAULT_VOLUME_LEVEL,
-                                'Volume level(0-7): %setting', whatType=int)
+                                'Volume level(0-7): %setting')
     silentMode = setting_factory(DEFAULT_SILENT,
-                                 'Silent mode: %setting', whatType=bool)
+                                 'Silent mode: %setting')
     
-    # Settings sub-windows
     
     
     # Sub-window for input
@@ -261,6 +260,7 @@ try:
     inputWin.refresh()
     stdscr.refresh()
     while True:
+        curses.flushinp()
         nameInput = choice
         stdscr.clear()
         stdscr.refresh()

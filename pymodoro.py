@@ -147,8 +147,14 @@ def play_sound(volume, silent):
             i += 1
         
 
-def send_notification(text):
-    pass
+def send_notification(content):
+    title = 'pymodoro'
+    notifId = 'pymodoro'
+    args =  f' -t {title}' +\
+            f' -c {content}' +\
+            f' -i {notifId}' +\
+            ' --alert-once'
+    os.system(f'termux-notification{args}')
 
 
 def finish(delay=2.211):
@@ -169,6 +175,7 @@ def oneBreak(length):
         breakWin.border()
         timeLeft = length - dt.timedelta(seconds=seconds)
         breakWin.addstr(2, 2, f'{timeLeft} left in break')
+        send_notification(f'{timeLeft} left in break')
         breakWin.refresh()
         time.sleep(1)
     play_sound(volumeLvl.value, silentMode.value)
@@ -183,6 +190,7 @@ def oneSlice(length):
         sliceWin.border()
         timeLeft = length - dt.timedelta(seconds=seconds)
         sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
+        send_notification(f'{timeLeft} left in slice')
         sliceWin.refresh()
         time.sleep(1)
     play_sound(volumeLvl.value, silentMode.value)
@@ -223,7 +231,7 @@ def block(slices):
 try:
     # Initialize curses
     stdscr = curses.initscr()
-    stdscr = curses.newwin(SCREENHEIGHT, SCREENWIDTH, 0, 0) #!!!
+    # stdscr = curses.newwin(SCREENHEIGHT, SCREENWIDTH, 0, 0) #!!!
     stdscr.keypad(True)
     curses.echo(False)
     curses.start_color()

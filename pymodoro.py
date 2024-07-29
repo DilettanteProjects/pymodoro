@@ -31,10 +31,10 @@ START_MOUSE_CAPTURE   = '\033[?1003h'
 STOP_MOUSE_CAPTURE    = '\033[?1003l'
 VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
 DEFAULT_VOLUME_LEVEL = 3 # 0-7, according to VOLUMESTEPS
+DEFAULT_SILENT = False
 DEFAULT_TIME_SLICE = dt.timedelta(minutes=25)
 DEFAULT_TIME_BREAK = dt.timedelta(minutes=5)
 DEFAULT_SLICES_PER_BLOCK = 4
-DEFAULT_SILENT = False
 ##############consts###############
 
 
@@ -109,10 +109,17 @@ distWindows = 0
 
 settingsList = []
 def setting_factory(value, text, whatType):
+    rowsPerColumn = 4
     heightWindows = 5
     widthWindows = 35
-    y, x = 0, 0
-    heightOffset = (heightWindows + distWindows) * len(settingsList)
+    y = 0
+    if len(settingsList) < rowsPerColumn:
+        x = 0
+        rowsThisColumn = len(settingsList)
+    else:
+        x = widthWindows
+        rowsThisColumn = len(settingsList) - rowsPerColumn
+    heightOffset = (heightWindows + distWindows) * rowsThisColumn
     newSetting = Setting(value, text, whatType, (y+heightOffset, x),
                    heightWindows, widthWindows)
     settingsList.append(newSetting)
@@ -125,10 +132,21 @@ def settings_menu():
         item.print_content()
 
 
-def play_sound(volume):
-    """Play the alert sound via terminal program"""
+def play_sound(volume, silent):
+    """Play the alert sound/vibrate via terminal program"""
     file = f'{PATH}/neg{VOLUMESTEPS[volume]}.mp3'
-    os.system(f'play-audio -s notification {file} &')
+    vibratePattern = (2150,)
+    if not silent:
+        os.system(f'play-audio -s notification {file} &')
+    else:
+        i = 0
+        while i < len(vibratePattern):
+            ms = vibratePattern[i]
+            os.system(f'termux-vibrate -f -d {ms}')
+            if i < len(vibratePattern) - 1:
+                time.sleep(ms / 1000)
+            i += 1
+        
 
 
 def finish(delay=2.211):
@@ -136,9 +154,9 @@ def finish(delay=2.211):
     ## because the fuction call takes variable lengths of time
     """Special alert to mark end of block"""
     time.sleep(delay)
-    play_sound(volumeLvl.value)
+    play_sound(volumeLvl.value, silentMode.value)
     time.sleep(delay)
-    play_sound(volumeLvl.value)
+    play_sound(volumeLvl.value, silentMode.value)
 
 
 def oneBreak(length):
@@ -151,7 +169,7 @@ def oneBreak(length):
         breakWin.addstr(2, 2, f'{timeLeft} left in break')
         breakWin.refresh()
         time.sleep(1)
-    play_sound(volumeLvl.value)
+    play_sound(volumeLvl.value, silentMode.value)
     stdscr.refresh()
 
 
@@ -165,7 +183,7 @@ def oneSlice(length):
         sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
         sliceWin.refresh()
         time.sleep(1)
-    play_sound(volumeLvl.value)
+    play_sound(volumeLvl.value, silentMode.value)
     
 
 def block(slices):

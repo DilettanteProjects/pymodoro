@@ -60,6 +60,23 @@ class BorderWindow():
     pass
 
 
+class Button():
+    instances = []
+    def __init__(self, y, x, label, action):
+        height = 10 
+        width = 25
+        self.label = label
+        self.action = action
+        self.window = curses.newwin(height, width, y, x)
+        Button.instances.append(self)
+    
+    def print_content(self):
+        self.window.clear()
+        self.window.border()
+        self.window.addstr(2, 2, self.label)
+        self.window.refresh()
+
+
 class Setting():
     #!!!(4) Can do this with list-pointers after all
     def __init__(self, value, text, ul:tuple, height, width):
@@ -180,25 +197,40 @@ def finish(delay=2.211):
     play_sound(volumeLvl.value, silentMode.value)
 
 
-def oneBreak(length:dt.timedelta):
+def shortBreak(length:dt.timedelta):
     #!!! (3) Def a case of DRY with the timekeeping in break, slice, longBreak
-    ## rename this shortBreak once long arrives
     """Break between slices"""
-    breakWin = curses.newwin(10, 40, 10, 10)
+    shortBreakWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
-        breakWin.clear()
-        breakWin.border()
+        shortBreakWin.clear()
+        shortBreakWin.border()
         timeLeft = timer.timeLeft()
-        breakWin.addstr(2, 2, f'{timeLeft} left in break')
+        shortBreakWin.addstr(2, 2, f'{timeLeft} left in break')
         send_notification(f'{timeLeft} left in break')
-        breakWin.refresh()
+        shortBreakWin.refresh()
         time.sleep(1)
     play_sound(volumeLvl.value, silentMode.value)
     stdscr.refresh()
 
 
-def oneSlice(length:dt.timedelta):
+def longBreak(length:dt.timedelta=dt.timedelta(minutes=30)):
+    """Break after a block"""
+    longBreakWin = curses.newwin(10, 40, 10, 10)
+    timer = Timer(length)
+    while not timer.done():
+        longBreakWin.clear()
+        longBreakWin.border()
+        timeLeft = timer.timeLeft()
+        longBreakWin.addstr(2, 2, f'{timeLeft} left in long break')
+        send_notification(f'{timeLeft} left in long break')
+        longBreakWin.refresh()
+        time.sleep(1)
+    play_sound(volumeLvl.value, silentMode.value)
+    stdscr.refresh()
+    
+
+def oneSlice(length:dt.timedelta=dt.timedelta(minutes=25)):
     """Work-'slice'"""
     sliceWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
@@ -213,7 +245,7 @@ def oneSlice(length:dt.timedelta):
     play_sound(volumeLvl.value, silentMode.value)
     
 
-def block(slices):
+def block(slices=4):
     """A block of multiple slices separated by breaks"""
     blockWin = curses.newwin(12, 42, 9, 9)
     for i in range(slices - 1):
@@ -222,7 +254,7 @@ def block(slices):
         blockWin.addstr(0, 2, f'Slice {i+1} of {slices}')
         blockWin.refresh()
         oneSlice(timeSlice.value)
-        oneBreak(timeBreak.value)
+        shortBreak(timeBreak.value)
     # Special case for last slice of block
     blockWin.clear()
     blockWin.border()
@@ -230,6 +262,12 @@ def block(slices):
     blockWin.refresh()
     oneSlice(timeSlice.value)
     finish()
+    
+
+def sliceNBreak(timeSlice=dt.timedelta(minutes=25),
+                timeBreak=dt.timedelta(minutes=5)):
+    oneSlice(timeSlice)
+    shortBreak(timeBreak)
 
 #%%###########fncts################
 
@@ -272,17 +310,27 @@ try:
     
     
     # Sub-window for input
-    inputWin = stdscr.derwin(6, 50, 30, 0)
+    # inputWin = stdscr.derwin(6, 50, 30, 0)
+    
+    # Windows/Buttons for starting subroutines
+    buttonY, buttonX = 30, 0
+    Button(buttonY, buttonX, 'Slice', sliceNBreak)
+    buttonX += 25 #!!!(5) Width of buttons(duh), make this dynamic please
+    Button(buttonY, buttonX, 'Block', block) #!!! Call of block not dynamic, attribute!
+    buttonX += 25 #!!!
+    Button(buttonY, buttonX, 'Long Break', longBreak)#!!! Again, not dynamic!
     
     
     # Main menu
     choice = 0
     nameInput = choice
-    inputWin.clear()
-    inputWin.border()
-    inputWin.addstr(2, 1, 'Enter blank for single slice,')
-    inputWin.addstr(3, 1, 'any other character for full block: ')
-    inputWin.refresh()
+    
+    # inputWin.clear()
+    # inputWin.border()
+    # inputWin.addstr(2, 1, 'Enter blank for single slice,')
+    # inputWin.addstr(3, 1, 'any other character for full block: ')
+    # inputWin.refresh()
+    
     stdscr.refresh()
     while True:
         curses.flushinp()
@@ -290,43 +338,41 @@ try:
         stdscr.clear()
         stdscr.refresh()
         settings_menu()
-        inputWin.clear()
-        inputWin.border()
-        # inputWin.addstr(1, 1, str(nameInput))
-        inputWin.addstr(2, 1, 'Hit return for single slice,')
-        inputWin.addstr(3, 1, 'any other character for full block: ')
-        inputWin.refresh()
+        for item in Button.instances:
+            item.print_content()
+        
+        # inputWin.clear()
+        # inputWin.border()
+        # # inputWin.addstr(1, 1, str(nameInput))
+        # inputWin.addstr(2, 1, 'Hit return for single slice,')
+        # inputWin.addstr(3, 1, 'any other character for full block: ')
+        # inputWin.refresh()
+        
         stdscr.refresh()
         curses.setsyx(8, 0)
         choice = stdscr.getkey()
         if choice == 'KEY_MOUSE':
+            stdscr.refresh()
             choice = curses.getmouse()
             xClicked = choice[1]
             yClicked = choice[2]
             
-            windowList = settingsList
+            windowList = settingsList.copy()
+            windowList.extend(Button.instances)
+            
             for window in windowList:
                 if window.window.enclose(yClicked, xClicked):
-                    window.edit()
-                    break
-        
-        elif choice != 'KEY_RESIZE':
-            inputWin.refresh()
-            stdscr.refresh()
-            os.system('termux-wake-lock')
-        
-            # Only one slice
-            if choice == '\n':
-                oneSlice(timeSlice.value)
-                oneBreak(timeBreak.value)
-            
-            # Full block
-            else:
-                block(slicesPerBlock.value)
-        
-            os.system('termux-wake-unlock')
-        
-        
+                    if type(window) is Setting:
+                        window.edit()
+                        break
+                    elif type(window) is Button:
+                        os.system('termux-wake-lock')
+                        window.action()
+                        os.system('termux-wake-unlock')
+                        break
+                    else:
+                        raise Exception(
+                            'Clicked window type recognition borked')
         
         stdscr.refresh()
 

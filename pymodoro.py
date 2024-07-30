@@ -33,14 +33,20 @@ VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
 DEFAULT_VOLUME_LEVEL = 3 # 0-7, according to VOLUMESTEPS
 DEFAULT_SILENT = False
 DEFAULT_TIME_SLICE = dt.timedelta(minutes=25)
-DEFAULT_TIME_BREAK = dt.timedelta(minutes=5)
+DEFAULT_TIME_SHORT_BREAK = dt.timedelta(minutes=5)
+DEFAULT_TIME_LONG_BREAK = dt.timedelta(minutes=30)
 DEFAULT_SLICES_PER_BLOCK = 4
 ##############consts###############
 
 
 # Variables
 ###################################
-
+ptrVolumeLvl = [DEFAULT_VOLUME_LEVEL]
+ptrSilentMode = [DEFAULT_SILENT]
+ptrTimeSlice = [DEFAULT_TIME_SLICE]
+ptrTimeShortBreak = [DEFAULT_TIME_SHORT_BREAK]
+ptrTimeLongBreak = [DEFAULT_TIME_LONG_BREAK]
+ptrSlicesPerBlock = [DEFAULT_SLICES_PER_BLOCK]
 ##############vars#################
 
 
@@ -79,8 +85,8 @@ class Button():
 
 class Setting():
     #!!!(4) Can do this with list-pointers after all
-    def __init__(self, value, text, ul:tuple, height, width):
-        self.value = value
+    def __init__(self, pointer, text, ul:tuple, height, width):
+        self.pointer = pointer
         self.text = text
         self.ul = ul
         self.height = height
@@ -91,13 +97,14 @@ class Setting():
         self.window.clear()
         self.window.border()
         self.window.addstr(2, 2,
-                        self.text.replace('%setting',str(self.value)))
+                        self.text.replace('%setting',str(self.pointer[0])))
         self.window.refresh()
         
     def edit(self):
         self.window.clear()
         self.window.border()
         self.window.addstr(2, 2, 'Enter new value: ')
+        
         curses.curs_set(1)
         curses.mousemask(0)
         curses.echo(True)
@@ -106,16 +113,49 @@ class Setting():
         curses.mousemask(
             curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
         curses.curs_set(0)
-        oldType = type(self.value)
-        if oldType == dt.timedelta:
-            self.value = dt.timedelta(minutes=float(choice))
-        else:
-            self.value = oldType(choice)
-        self.print_content()
         
+        oldType = type(self.pointer[0])
+        if oldType == dt.timedelta:
+            newValue = dt.timedelta(minutes=float(choice))
+        elif oldType == bool:
+            newValue = bool(int(choice))
+        else:
+            newValue = oldType(choice)
+        self.pointer.clear()
+        self.pointer.append(newValue)
+        
+        self.print_content()
+  
+distWindows = 0
+
+settingsList = []
+def setting_factory(pointer, text):
+    rowsPerColumn = 4
+    heightWindows = 5
+    widthWindows = 41
+    y = 0
+    if len(settingsList) < rowsPerColumn:
+        x = 0
+        rowsThisColumn = len(settingsList)
+    else:
+        x = widthWindows
+        rowsThisColumn = len(settingsList) - rowsPerColumn
+    heightOffset = (heightWindows + distWindows) * rowsThisColumn
+    newSetting = Setting(pointer, text, (y+heightOffset, x),
+                   heightWindows, widthWindows)
+    settingsList.append(newSetting)
+    return newSetting
+
+
+def settings_menu():
+    for item in settingsList:
+        stdscr.refresh()
+        item.print_content()    
+  
+    
 
 class Timer():
-    def __init__(self, length:dt.timedelta):
+    def __init__(self, length):
         start = time.time()
         self.end = start + length.seconds
     def done(self):
@@ -133,35 +173,14 @@ class Timer():
 
 #%% Functions
 ###################################
-distWindows = 0
-
-settingsList = []
-def setting_factory(value, text):
-    rowsPerColumn = 4
-    heightWindows = 5
-    widthWindows = 35
-    y = 0
-    if len(settingsList) < rowsPerColumn:
-        x = 0
-        rowsThisColumn = len(settingsList)
-    else:
-        x = widthWindows
-        rowsThisColumn = len(settingsList) - rowsPerColumn
-    heightOffset = (heightWindows + distWindows) * rowsThisColumn
-    newSetting = Setting(value, text, (y+heightOffset, x),
-                   heightWindows, widthWindows)
-    settingsList.append(newSetting)
-    return newSetting
 
 
-def settings_menu():
-    for item in settingsList:
-        stdscr.refresh()
-        item.print_content()
 
-
-def play_sound(volume, silent):
+def play_sound():
     """Play the alert sound/vibrate via terminal program"""
+    # Why not global?
+    volume = ptrVolumeLvl[0]
+    silent = ptrSilentMode[0]
     file = f'{PATH}/neg{VOLUMESTEPS[volume]}.mp3'
     vibratePattern = (2150,)
     if not silent:
@@ -192,14 +211,15 @@ def finish(delay=2.211):
     ## because the fuction call takes variable lengths of time
     """Special alert to mark end of block"""
     time.sleep(delay)
-    play_sound(volumeLvl.value, silentMode.value)
+    play_sound()
     time.sleep(delay)
-    play_sound(volumeLvl.value, silentMode.value)
+    play_sound()
 
 
-def shortBreak(length:dt.timedelta):
+def shortBreak(lengthPtr=ptrTimeShortBreak):
     #!!! (3) Def a case of DRY with the timekeeping in break, slice, longBreak
     """Break between slices"""
+    length = lengthPtr[0]
     shortBreakWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
@@ -210,12 +230,13 @@ def shortBreak(length:dt.timedelta):
         send_notification(f'{timeLeft} left in break')
         shortBreakWin.refresh()
         time.sleep(1)
-    play_sound(volumeLvl.value, silentMode.value)
+    play_sound()
     stdscr.refresh()
 
 
-def longBreak(length:dt.timedelta=dt.timedelta(minutes=30)):
+def longBreak(lengthPtr=ptrTimeLongBreak):
     """Break after a block"""
+    length = lengthPtr[0]
     longBreakWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
@@ -226,12 +247,13 @@ def longBreak(length:dt.timedelta=dt.timedelta(minutes=30)):
         send_notification(f'{timeLeft} left in long break')
         longBreakWin.refresh()
         time.sleep(1)
-    play_sound(volumeLvl.value, silentMode.value)
+    play_sound()
     stdscr.refresh()
     
 
-def oneSlice(length:dt.timedelta=dt.timedelta(minutes=25)):
+def oneSlice(lengthPtr=ptrTimeSlice):
     """Work-'slice'"""
+    length = lengthPtr[0]
     sliceWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
@@ -242,32 +264,32 @@ def oneSlice(length:dt.timedelta=dt.timedelta(minutes=25)):
         send_notification(f'{timeLeft} left in slice')
         sliceWin.refresh()
         time.sleep(1)
-    play_sound(volumeLvl.value, silentMode.value)
+    play_sound()
     
 
-def block(slices=4):
+def block(slicesPtr=ptrSlicesPerBlock):
     """A block of multiple slices separated by breaks"""
+    slices = slicesPtr[0]
     blockWin = curses.newwin(12, 42, 9, 9)
     for i in range(slices - 1):
         blockWin.clear()
         blockWin.border()
         blockWin.addstr(0, 2, f'Slice {i+1} of {slices}')
         blockWin.refresh()
-        oneSlice(timeSlice.value)
-        shortBreak(timeBreak.value)
+        oneSlice()
+        shortBreak()
     # Special case for last slice of block
     blockWin.clear()
     blockWin.border()
     blockWin.addstr(0, 2, f'Slice {slices} of {slices}')
     blockWin.refresh()
-    oneSlice(timeSlice.value)
+    oneSlice()
     finish()
     
 
-def sliceNBreak(timeSlice=dt.timedelta(minutes=25),
-                timeBreak=dt.timedelta(minutes=5)):
-    oneSlice(timeSlice)
-    shortBreak(timeBreak)
+def sliceNBreak():
+    oneSlice()
+    shortBreak()
 
 #%%###########fncts################
 
@@ -296,21 +318,20 @@ try:
     
     
     # Initialize settings      
-    timeSlice = setting_factory(DEFAULT_TIME_SLICE,
+    timeSlice = setting_factory(ptrTimeSlice,
                                 'Time per slice: %setting Minutes')
-    timeBreak = setting_factory(DEFAULT_TIME_BREAK,
-                                'Time per break: %setting Minutes')
-    slicesPerBlock = setting_factory(DEFAULT_SLICES_PER_BLOCK, 
+    timeShortBreak = setting_factory(ptrTimeShortBreak ,
+                                'Time per short break: %setting Minutes')
+    timeLongBreak = setting_factory(ptrTimeLongBreak ,
+                                'Time per long break: %setting Minutes')
+    slicesPerBlock = setting_factory(ptrSlicesPerBlock, 
                              'Slices per block: %setting')
-    volumeLvl = setting_factory(DEFAULT_VOLUME_LEVEL,
+    volumeLvl = setting_factory(ptrVolumeLvl,
                                 'Volume level(0-7): %setting')
-    silentMode = setting_factory(DEFAULT_SILENT,
+    silentMode = setting_factory(ptrSilentMode,
                                  'Silent mode: %setting')
     
     
-    
-    # Sub-window for input
-    # inputWin = stdscr.derwin(6, 50, 30, 0)
     
     # Windows/Buttons for starting subroutines
     buttonY, buttonX = 30, 0
@@ -325,12 +346,7 @@ try:
     choice = 0
     nameInput = choice
     
-    # inputWin.clear()
-    # inputWin.border()
-    # inputWin.addstr(2, 1, 'Enter blank for single slice,')
-    # inputWin.addstr(3, 1, 'any other character for full block: ')
-    # inputWin.refresh()
-    
+   
     stdscr.refresh()
     while True:
         curses.flushinp()
@@ -341,12 +357,7 @@ try:
         for item in Button.instances:
             item.print_content()
         
-        # inputWin.clear()
-        # inputWin.border()
-        # # inputWin.addstr(1, 1, str(nameInput))
-        # inputWin.addstr(2, 1, 'Hit return for single slice,')
-        # inputWin.addstr(3, 1, 'any other character for full block: ')
-        # inputWin.refresh()
+       
         
         stdscr.refresh()
         curses.setsyx(8, 0)
@@ -373,7 +384,8 @@ try:
                     else:
                         raise Exception(
                             'Clicked window type recognition borked')
-        
+        for item in Button.instances:
+            item.print_content()
         stdscr.refresh()
 
 # Exit handling

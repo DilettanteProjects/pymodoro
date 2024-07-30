@@ -61,6 +61,7 @@ class BorderWindow():
 
 
 class Setting():
+    #!!!(4) Can do this with list-pointers after all
     def __init__(self, value, text, ul:tuple, height, width):
         self.value = value
         self.text = text
@@ -96,8 +97,19 @@ class Setting():
         self.print_content()
         
 
-
+class Timer():
+    def __init__(self, length:dt.timedelta):
+        start = time.time()
+        self.end = start + length.seconds
+    def done(self):
+        if self.end <= time.time():
+            return True
+        else:
+            return False
+    def timeLeft(self):
+        return dt.timedelta(seconds=self.end - time.time()).__str__()[:7]
         
+      
 
 #%%###########classes##############
 
@@ -168,13 +180,16 @@ def finish(delay=2.211):
     play_sound(volumeLvl.value, silentMode.value)
 
 
-def oneBreak(length):
+def oneBreak(length:dt.timedelta):
+    #!!! (3) Def a case of DRY with the timekeeping in break, slice, longBreak
+    ## rename this shortBreak once long arrives
     """Break between slices"""
     breakWin = curses.newwin(10, 40, 10, 10)
-    for seconds in range(int(length.seconds)):
+    timer = Timer(length)
+    while not timer.done():
         breakWin.clear()
         breakWin.border()
-        timeLeft = length - dt.timedelta(seconds=seconds)
+        timeLeft = timer.timeLeft()
         breakWin.addstr(2, 2, f'{timeLeft} left in break')
         send_notification(f'{timeLeft} left in break')
         breakWin.refresh()
@@ -183,13 +198,14 @@ def oneBreak(length):
     stdscr.refresh()
 
 
-def oneSlice(length):
+def oneSlice(length:dt.timedelta):
     """Work-'slice'"""
     sliceWin = curses.newwin(10, 40, 10, 10)
-    for seconds in range(int(length.seconds)):
+    timer = Timer(length)
+    while not timer.done():
         sliceWin.clear()
         sliceWin.border()
-        timeLeft = length - dt.timedelta(seconds=seconds)
+        timeLeft = timer.timeLeft()
         sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
         send_notification(f'{timeLeft} left in slice')
         sliceWin.refresh()

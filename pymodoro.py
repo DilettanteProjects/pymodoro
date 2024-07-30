@@ -1,4 +1,4 @@
-ver = 1.40
+ver = 1.75
 
 
 
@@ -389,14 +389,16 @@ try:
         stdscr.refresh()
         curses.setsyx(8, 0)
         choice = stdscr.getkey()
+        windowList = settingsList.copy()
+        windowList.extend(Button.instances)
+        
         if choice == 'KEY_MOUSE':
             stdscr.refresh()
             choice = curses.getmouse()
             xClicked = choice[1]
             yClicked = choice[2]
             
-            windowList = settingsList.copy()
-            windowList.extend(Button.instances)
+            
             
             for window in windowList:
                 if window.window.enclose(yClicked, xClicked):
@@ -412,6 +414,11 @@ try:
                     else:
                         raise Exception(
                             'Clicked window type recognition borked')
+        elif choice == '\n':
+            for window in windowList:
+                window.print_content()
+            stdscr.refresh()
+                        
         for item in Button.instances:
             item.print_content()
         stdscr.refresh()

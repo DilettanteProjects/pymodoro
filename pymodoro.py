@@ -12,6 +12,7 @@ import datetime as dt
 import time
 import curses
 import traceback
+import pickle
 
 # Custom modules
 
@@ -173,12 +174,35 @@ class Timer():
 
 #%% Functions
 ###################################
+def save_settings():
+    #!!!(6) Both save and load could be a lot more dynamic. Or at all dynamic
+    settingsDict = { 'volumeLvl'      : ptrVolumeLvl[0],
+                     'silentMode'     : ptrSilentMode[0],
+                     'timeSlice'      : ptrTimeSlice[0],
+                     'timeShortBreak' : ptrTimeShortBreak[0],
+                     'timeLongBreak'  : ptrTimeLongBreak[0],
+                     'slicesPerBlock' : ptrSlicesPerBlock[0],
+                     }
+    with open(f'{PATH}/settings.pkl', 'wb') as file:
+        pickle.dump(settingsDict, file)
 
+
+def load_settings():
+    def setVal(ptr:list, newVal):
+        ptr.clear()
+        ptr.append(newVal)
+    with open (f'{PATH}/settings.pkl', 'rb') as file:
+        settingsDict = pickle.load(file)
+    setVal(ptrVolumeLvl, settingsDict['volumeLvl'])
+    setVal(ptrSilentMode, settingsDict['silentMode'])
+    setVal(ptrTimeSlice , settingsDict['timeSlice'])
+    setVal(ptrTimeShortBreak , settingsDict['timeShortBreak'])
+    setVal(ptrTimeLongBreak , settingsDict['timeLongBreak'])
+    setVal(ptrSlicesPerBlock , settingsDict['slicesPerBlock'])
 
 
 def play_sound():
     """Play the alert sound/vibrate via terminal program"""
-    # Why not global?
     volume = ptrVolumeLvl[0]
     silent = ptrSilentMode[0]
     file = f'{PATH}/neg{VOLUMESTEPS[volume]}.mp3'
@@ -317,6 +341,9 @@ try:
     # print(START_MOUSE_CAPTURE)
     
     
+    if os.path.exists(f'{PATH}/settings.pkl'):
+        load_settings()
+    
     # Initialize settings      
     timeSlice = setting_factory(ptrTimeSlice,
                                 'Time per slice: %setting Minutes')
@@ -375,6 +402,7 @@ try:
                 if window.window.enclose(yClicked, xClicked):
                     if type(window) is Setting:
                         window.edit()
+                        save_settings()
                         break
                     elif type(window) is Button:
                         os.system('termux-wake-lock')

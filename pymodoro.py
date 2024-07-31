@@ -417,7 +417,7 @@ try:
         elif choice == '\n':
             for window in windowList:
                 window.print_content()
-                window.redrawwin()
+                window.window.redrawwin()
             stdscr.redrawwin()
             stdscr.refresh()
                         

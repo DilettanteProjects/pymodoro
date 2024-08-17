@@ -31,12 +31,13 @@ SCREENHEIGHT    = 43    ##  bers for *my* phone
 START_MOUSE_CAPTURE   = '\033[?1003h'
 STOP_MOUSE_CAPTURE    = '\033[?1003l'
 VOLUMESTEPS = (50, 40, 30, 20, 15, 10, 5, 0)
-DEFAULT_VOLUME_LEVEL = 3 # 0-7, according to VOLUMESTEPS
+DEFAULT_VOLUME_LEVEL = 3     # 0-7, according to VOLUMESTEPS
 DEFAULT_SILENT = False
 DEFAULT_TIME_SLICE = dt.timedelta(minutes=25)
 DEFAULT_TIME_SHORT_BREAK = dt.timedelta(minutes=5)
 DEFAULT_TIME_LONG_BREAK = dt.timedelta(minutes=30)
 DEFAULT_SLICES_PER_BLOCK = 4
+DEFAULT_LEAN_MODE = True
 ##############consts###############
 
 
@@ -48,6 +49,7 @@ ptrTimeSlice = [DEFAULT_TIME_SLICE]
 ptrTimeShortBreak = [DEFAULT_TIME_SHORT_BREAK]
 ptrTimeLongBreak = [DEFAULT_TIME_LONG_BREAK]
 ptrSlicesPerBlock = [DEFAULT_SLICES_PER_BLOCK]
+ptrLeanMode = [DEFAULT_LEAN_MODE]
 ##############vars#################
 
 
@@ -62,12 +64,11 @@ ptrSlicesPerBlock = [DEFAULT_SLICES_PER_BLOCK]
 
 #%% Classes
 ###################################
-class BorderWindow():
+class BorderWindow:
     """Da window wit da border on it"""
     pass
 
-
-class Button():
+class Button:
     instances = []
     def __init__(self, y, x, label, action):
         height = 10 
@@ -83,8 +84,7 @@ class Button():
         self.window.addstr(2, 2, self.label)
         self.window.refresh()
 
-
-class Setting():
+class Setting:
     #!!!(4) Can do this with list-pointers after all
     def __init__(self, pointer, text, ul:tuple, height, width):
         self.pointer = pointer
@@ -155,7 +155,7 @@ def settings_menu():
   
     
 
-class Timer():
+class Timer:
     def __init__(self, length):
         start = time.time()
         self.end = start + length.seconds
@@ -164,7 +164,7 @@ class Timer():
             return True
         else:
             return False
-    def timeLeft(self):
+    def time_left(self):
         return dt.timedelta(seconds=self.end - time.time()).__str__()[:7]
         
       
@@ -174,6 +174,13 @@ class Timer():
 
 #%% Functions
 ###################################
+def round_off(number):
+    if number % 5 == 0:
+        return number - 5
+    else:
+        return number - (number % 5)
+
+
 def save_settings():
     #!!!(6) Both save and load could be a lot more dynamic. Or at all dynamic
     settingsDict = { 'volumeLvl'      : ptrVolumeLvl[0],
@@ -182,23 +189,25 @@ def save_settings():
                      'timeShortBreak' : ptrTimeShortBreak[0],
                      'timeLongBreak'  : ptrTimeLongBreak[0],
                      'slicesPerBlock' : ptrSlicesPerBlock[0],
+                     'leanMode'       : ptrLeanMode[0],
                      }
     with open(f'{PATH}/settings.pkl', 'wb') as file:
         pickle.dump(settingsDict, file)
 
 
 def load_settings():
-    def setVal(ptr:list, newVal):
+    def set_val(ptr:list, newVal):
         ptr.clear()
         ptr.append(newVal)
     with open (f'{PATH}/settings.pkl', 'rb') as file:
         settingsDict = pickle.load(file)
-    setVal(ptrVolumeLvl, settingsDict['volumeLvl'])
-    setVal(ptrSilentMode, settingsDict['silentMode'])
-    setVal(ptrTimeSlice , settingsDict['timeSlice'])
-    setVal(ptrTimeShortBreak , settingsDict['timeShortBreak'])
-    setVal(ptrTimeLongBreak , settingsDict['timeLongBreak'])
-    setVal(ptrSlicesPerBlock , settingsDict['slicesPerBlock'])
+    set_val(ptrVolumeLvl, settingsDict['volumeLvl'])
+    set_val(ptrSilentMode, settingsDict['silentMode'])
+    set_val(ptrTimeSlice, settingsDict['timeSlice'])
+    set_val(ptrTimeShortBreak, settingsDict['timeShortBreak'])
+    set_val(ptrTimeLongBreak, settingsDict['timeLongBreak'])
+    set_val(ptrSlicesPerBlock, settingsDict['slicesPerBlock'])
+    set_val(ptrLeanMode, settingsDict['leanMode'])
 
 
 def play_sound():
@@ -240,54 +249,78 @@ def finish(delay=2.211):
     play_sound()
 
 
-def shortBreak(lengthPtr=ptrTimeShortBreak):
+def short_break(lengthPtr=ptrTimeShortBreak):
     #!!! (3) Def a case of DRY with the timekeeping in break, slice, longBreak
     """Break between slices"""
     length = lengthPtr[0]
     shortBreakWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
+        
+        
         shortBreakWin.clear()
         shortBreakWin.border()
-        timeLeft = timer.timeLeft()
+        timeLeft = timer.time_left()
         shortBreakWin.addstr(2, 2, f'{timeLeft} left in break')
         send_notification(f'{timeLeft} left in break')
         shortBreakWin.refresh()
         time.sleep(1)
+        
+        
     play_sound()
     stdscr.refresh()
 
 
-def longBreak(lengthPtr=ptrTimeLongBreak):
+def long_break(lengthPtr=ptrTimeLongBreak):
     """Break after a block"""
     length = lengthPtr[0]
     longBreakWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
+        
+        
         longBreakWin.clear()
         longBreakWin.border()
-        timeLeft = timer.timeLeft()
+        timeLeft = timer.time_left()
         longBreakWin.addstr(2, 2, f'{timeLeft} left in long break')
         send_notification(f'{timeLeft} left in long break')
         longBreakWin.refresh()
         time.sleep(1)
+        
+        
     play_sound()
     stdscr.refresh()
     
 
-def oneSlice(lengthPtr=ptrTimeSlice):
+def one_slice(lengthPtr=ptrTimeSlice):
     """Work-'slice'"""
     length = lengthPtr[0]
     sliceWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
-        sliceWin.clear()
-        sliceWin.border()
-        timeLeft = timer.timeLeft()
-        sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
-        send_notification(f'{timeLeft} left in slice')
-        sliceWin.refresh()
-        time.sleep(1)
+        timeLeft = timer.time_left()
+        
+        if ptrLeanMode[0]:
+            minutesLeft = int(timeLeft[2:4])
+            if minutesLeft > 6:
+                sliceWin.clear()
+                sliceWin.border()
+                sliceWin.addstr(2, 2, f'>{minutesLeft}min left in slice')
+                send_notification(f'>{minutesLeft}min left in slice')
+                sliceWin.refresh()
+                time.sleep(60 * 5)
+            else:
+                ptrLeanMode[0] = False
+
+        else:
+            sliceWin.clear()
+            sliceWin.border()
+            sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
+            send_notification(f'{timeLeft} left in slice')
+            sliceWin.refresh()
+            time.sleep(1)
+        
+        
     play_sound()
     
 
@@ -300,20 +333,20 @@ def block(slicesPtr=ptrSlicesPerBlock):
         blockWin.border()
         blockWin.addstr(0, 2, f'Slice {i+1} of {slices}')
         blockWin.refresh()
-        oneSlice()
-        shortBreak()
+        one_slice()
+        short_break()
     # Special case for last slice of block
     blockWin.clear()
     blockWin.border()
     blockWin.addstr(0, 2, f'Slice {slices} of {slices}')
     blockWin.refresh()
-    oneSlice()
+    one_slice()
     finish()
     
 
-def sliceNBreak():
-    oneSlice()
-    shortBreak()
+def slice_n_break():
+    one_slice()
+    short_break()
 
 #%%###########fncts################
 
@@ -357,16 +390,18 @@ try:
                                 'Volume level(0-7): %setting')
     silentMode = setting_factory(ptrSilentMode,
                                  'Silent mode: %setting')
+    leanMode = setting_factory(ptrLeanMode,
+                               'Lean mode: %setting')
     
     
     
     # Windows/Buttons for starting subroutines
     buttonY, buttonX = 30, 0
-    Button(buttonY, buttonX, 'Slice', sliceNBreak)
+    Button(buttonY, buttonX, 'Slice', slice_n_break)
     buttonX += 25 #!!!(5) Width of buttons(duh), make this dynamic please
     Button(buttonY, buttonX, 'Block', block) #!!! Call of block not dynamic, attribute!
     buttonX += 25 #!!!
-    Button(buttonY, buttonX, 'Long Break', longBreak)#!!! Again, not dynamic!
+    Button(buttonY, buttonX, 'Long Break', long_break)#!!! Again, not dynamic!
     
     
     # Main menu
@@ -398,8 +433,7 @@ try:
             xClicked = choice[1]
             yClicked = choice[2]
             
-            
-            
+
             for window in windowList:
                 if window.window.enclose(yClicked, xClicked):
                     if type(window) is Setting:
@@ -411,9 +445,7 @@ try:
                         window.action()
                         os.system('termux-wake-unlock')
                         break
-                    else:
-                        raise Exception(
-                            'Clicked window type recognition borked')
+                    
         elif choice == '\n':
             for window in windowList:
                 window.print_content()

@@ -1,8 +1,8 @@
 ver = 1.75
 
 
-
-#%% Init stuff(Imports, const, vars)
+# Init stuff(Imports, const, vars)
+#region
 # Imports
 ###################################
 # Standard modules
@@ -62,11 +62,11 @@ ptrNotifPrio = [DEFAULT_NOTIFICATION_PRIORITY]
 
 ##############hlprs################
 
+#endregion
+##############init#################
 
-#%%###########init#################
-
-
-#%% Classes
+# Classes
+#region
 ###################################
 class BorderWindow:
     """Da window wit da border on it"""
@@ -200,13 +200,14 @@ class Timer:
             return False
     def time_left(self):
         return dt.timedelta(seconds=self.end - time.time()).__str__()[:7]
-        
-      
-
-#%%###########classes##############
 
 
-#%% Functions
+
+#endregion
+##############classes##############
+
+# Functions
+#region
 ###################################
 def round_off(number):
     if number % 5 == 0:
@@ -283,80 +284,51 @@ def finish(delay=2.211):
     play_sound()
 
 
-def short_break(lengthPtr=ptrTimeShortBreak):
-    #!!! (3) Def a case of DRY with the timekeeping in break, slice, longBreak
-    """Break between slices"""
-    length = lengthPtr[0]
-    shortBreakWin = curses.newwin(10, 40, 10, 10)
-    timer = Timer(length)
-    while not timer.done():
-        
-        
-        shortBreakWin.clear()
-        shortBreakWin.border()
-        timeLeft = timer.time_left()
-        shortBreakWin.addstr(2, 2, f'{timeLeft} left in break')
-        send_notification(f'{timeLeft} left in break')
-        shortBreakWin.refresh()
-        time.sleep(1)
-        
-        
-    play_sound()
-    stdscr.refresh()
+def time_keeper(kind:str):
+    """Universal countdown handler"""
+    match kind:
+        case 'slice':
+            length = ptrTimeSlice[0]
+        case 'short break':
+            length = ptrTimeShortBreak[0]
+        case 'long break':
+            length = ptrTimeLongBreak[0]
+        case _:
+            raise Exception('Invalid {kind} of timer')
 
+    countdownWin = curses.newwin(10, 40, 10, 10)
 
-def long_break(lengthPtr=ptrTimeLongBreak):
-    """Break after a block"""
-    length = lengthPtr[0]
-    longBreakWin = curses.newwin(10, 40, 10, 10)
-    timer = Timer(length)
-    while not timer.done():
-        
-        
-        longBreakWin.clear()
-        longBreakWin.border()
-        timeLeft = timer.time_left()
-        longBreakWin.addstr(2, 2, f'{timeLeft} left in long break')
-        send_notification(f'{timeLeft} left in long break')
-        longBreakWin.refresh()
-        time.sleep(1)
-        
-        
-    play_sound()
-    stdscr.refresh()
-    
-
-def one_slice(lengthPtr=ptrTimeSlice):
-    """Work-'slice'"""
-    length = lengthPtr[0]
-    sliceWin = curses.newwin(10, 40, 10, 10)
     timer = Timer(length)
     while not timer.done():
         timeLeft = timer.time_left()
-        
+
+        # Lean mode
         if ptrLeanMode[0]:
             minutesLeft = int(timeLeft[2:4])
             if minutesLeft > 6:
-                sliceWin.clear()
-                sliceWin.border()
-                sliceWin.addstr(2, 2, f'>{minutesLeft}min left in slice')
-                send_notification(f'>{minutesLeft}min left in slice')
-                sliceWin.refresh()
+                countdownWin.clear()
+                countdownWin.border()
+                countdownWin.addstr(2, 2,
+                                    f'< {minutesLeft + 1}min left in {kind}')
+                send_notification(f'< {minutesLeft + 1}min left in {kind}')
+                countdownWin.refresh()
                 time.sleep(60 * 5)
             else:
                 ptrLeanMode[0] = False
 
+        # Real-time mode
         else:
-            sliceWin.clear()
-            sliceWin.border()
-            sliceWin.addstr(2, 2, f'{timeLeft} left in slice')
-            send_notification(f'{timeLeft} left in slice')
-            sliceWin.refresh()
+            countdownWin.clear()
+            countdownWin.border()
+            countdownWin.addstr(2, 2, f'{timeLeft} left in {kind}')
+            send_notification(f'{timeLeft} left in {kind}')
+            countdownWin.refresh()
             time.sleep(1)
-        
-        
+
+    # Finishing up
     play_sound()
-    
+    stdscr.refresh()
+
 
 def block(slicesPtr=ptrSlicesPerBlock):
     """A block of multiple slices separated by breaks"""
@@ -367,33 +339,35 @@ def block(slicesPtr=ptrSlicesPerBlock):
         blockWin.border()
         blockWin.addstr(0, 2, f'Slice {i+1} of {slices}')
         blockWin.refresh()
-        one_slice()
-        short_break()
+        time_keeper('slice')
+        time_keeper('short break')
     # Special case for last slice of block
     blockWin.clear()
     blockWin.border()
     blockWin.addstr(0, 2, f'Slice {slices} of {slices}')
     blockWin.refresh()
-    one_slice()
+    time_keeper('slice')
     finish()
     
 
 def slice_n_break():
-    one_slice()
-    short_break()
+    time_keeper('slice')
+    time_keeper('short break')
 
-#%%###########fncts################
+#endregion
+##############fncts################
 
-
-#%% Objects
+# Objects
+#region
 ###################################
 
-#%%###########objcts###############
+#endregion
+##############objcts###############
 
 
 
-
-#%% Main Program
+# Main Program
+#region
 ###################################
 
 try:
@@ -440,7 +414,8 @@ try:
     buttonX += 25 #!!!(5) Width of buttons(duh), make this dynamic please
     Button(buttonY, buttonX, 'Block', block) #!!! Call of block not dynamic, attribute!
     buttonX += 25 #!!!
-    Button(buttonY, buttonX, 'Long Break', long_break)#!!! Again, not dynamic!
+    Button(buttonY, buttonX, 'Long Break',
+           lambda: time_keeper('long break'))   #!!! Again, not dynamic!
     
     
     # Main menu
@@ -512,8 +487,8 @@ finally:
 
 
 
-#%%##########main##################
-
+#endregion
+#############main##################
 
     
 

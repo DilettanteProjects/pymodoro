@@ -133,7 +133,7 @@ settingsList = []
 def setting_factory(pointer, text):
     rowsPerColumn = 4
     heightWindows = 5
-    widthWindows = 41
+    widthWindows = 40
     y = 0
     if len(settingsList) < rowsPerColumn:
         x = 0
@@ -379,11 +379,11 @@ try:
     
     # Initialize settings      
     timeSlice = setting_factory(ptrTimeSlice,
-                                'Time per slice: %setting Minutes')
+                                'Time per slice: %setting Mins')
     timeShortBreak = setting_factory(ptrTimeShortBreak ,
-                                'Time per short break: %setting Minutes')
+                                'Time per short break: %setting Mins')
     timeLongBreak = setting_factory(ptrTimeLongBreak ,
-                                'Time per long break: %setting Minutes')
+                                'Time per long break: %setting Mins')
     slicesPerBlock = setting_factory(ptrSlicesPerBlock, 
                              'Slices per block: %setting')
     volumeLvl = setting_factory(ptrVolumeLvl,

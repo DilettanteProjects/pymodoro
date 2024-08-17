@@ -26,6 +26,7 @@ import pickle
 # Constants
 ################################### 
 PATH = str(pathlib.Path(__file__).parent.resolve())
+NOTIF_ID = 'pymodoro'
 SCREENWIDTH     = 83    # These are magic num-
 SCREENHEIGHT    = 43    ##  bers for *my* phone
 START_MOUSE_CAPTURE   = '\033[?1003h'
@@ -38,6 +39,8 @@ DEFAULT_TIME_SHORT_BREAK = dt.timedelta(minutes=5)
 DEFAULT_TIME_LONG_BREAK = dt.timedelta(minutes=30)
 DEFAULT_SLICES_PER_BLOCK = 4
 DEFAULT_LEAN_MODE = True
+DEFAULT_NOTIFICATION_PRIORITY = 'default'
+NOTIFICATION_PRIORITY_OPTIONS = ('max', 'high', 'default', 'low', 'min')
 ##############consts###############
 
 
@@ -50,6 +53,7 @@ ptrTimeShortBreak = [DEFAULT_TIME_SHORT_BREAK]
 ptrTimeLongBreak = [DEFAULT_TIME_LONG_BREAK]
 ptrSlicesPerBlock = [DEFAULT_SLICES_PER_BLOCK]
 ptrLeanMode = [DEFAULT_LEAN_MODE]
+ptrNotifPrio = [DEFAULT_NOTIFICATION_PRIORITY]
 ##############vars#################
 
 
@@ -126,15 +130,37 @@ class Setting:
         self.pointer.append(newValue)
         
         self.print_content()
-  
-distWindows = 0
 
+
+class CycleSetting(Setting):
+    """Setting that cycles through valid settings instead of taking input"""
+    def __init__(self, pointer, text, change, states:tuple,
+                 ul:tuple, height, width):
+        super().__init__(pointer, text, ul, height, width)
+        self.change = change
+        self.states = states
+
+    def edit(self):
+        self.window.clear()
+        self.window.border()
+        position = self.states.index(self.pointer[0])
+        if position + 1 == len(self.states):
+            newValue = self.states[0]
+        else:
+            newValue = self.states[position + 1]
+        self.pointer.clear()
+        self.pointer.append(newValue)
+        self.print_content()
+
+
+distWindows = 0
 settingsList = []
-def setting_factory(pointer, text):
+def setting_factory(pointer, text, change='manual', states=None):
     rowsPerColumn = 4
     heightWindows = 5
     widthWindows = 40
     y = 0
+    #
     if len(settingsList) < rowsPerColumn:
         x = 0
         rowsThisColumn = len(settingsList)
@@ -142,8 +168,16 @@ def setting_factory(pointer, text):
         x = widthWindows
         rowsThisColumn = len(settingsList) - rowsPerColumn
     heightOffset = (heightWindows + distWindows) * rowsThisColumn
-    newSetting = Setting(pointer, text, (y+heightOffset, x),
-                   heightWindows, widthWindows)
+    #
+    ul = (y+heightOffset, x)
+    if change == 'manual':
+        newSetting = Setting(pointer, text, ul, heightWindows, widthWindows)
+    elif change == 'cycle':
+        newSetting = CycleSetting(pointer, text, change, states,
+                                  ul, heightWindows, widthWindows)
+    else:
+        raise Exception('Invalid "change type" for Setting')
+    #
     settingsList.append(newSetting)
     return newSetting
 
@@ -230,11 +264,11 @@ def play_sound():
 
 def send_notification(content):
     title = 'pymodoro'
-    notifId = 'pymodoro'
     content = f"'{content}'"
     args =  f' -t {title}' +\
             f' -c {content}' +\
-            f' -i {notifId}' +\
+            f' -i {NOTIF_ID}' +\
+            f' --priority {ptrNotifPrio[0]}' +\
             ' --alert-once'
     os.system(f'termux-notification{args}')
 
@@ -380,18 +414,23 @@ try:
     # Initialize settings      
     timeSlice = setting_factory(ptrTimeSlice,
                                 'Time per slice: %setting Mins')
-    timeShortBreak = setting_factory(ptrTimeShortBreak ,
+    timeShortBreak = setting_factory(ptrTimeShortBreak,
                                 'Time per short break: %setting Mins')
-    timeLongBreak = setting_factory(ptrTimeLongBreak ,
+    timeLongBreak = setting_factory(ptrTimeLongBreak,
                                 'Time per long break: %setting Mins')
     slicesPerBlock = setting_factory(ptrSlicesPerBlock, 
                              'Slices per block: %setting')
     volumeLvl = setting_factory(ptrVolumeLvl,
                                 'Volume level(0-7): %setting')
     silentMode = setting_factory(ptrSilentMode,
-                                 'Silent mode: %setting')
+                                 'Silent mode: %setting', 'cycle',
+                                 (True, False))
     leanMode = setting_factory(ptrLeanMode,
-                               'Lean mode: %setting')
+                               'Lean mode: %setting', 'cycle',
+                               (True, False))
+    notifPrio = setting_factory(ptrNotifPrio,
+                                'Notification priority: %setting', 'cycle',
+                                NOTIFICATION_PRIORITY_OPTIONS)
     
     
     
@@ -436,13 +475,14 @@ try:
 
             for window in windowList:
                 if window.window.enclose(yClicked, xClicked):
-                    if type(window) is Setting:
+                    if type(window) is Setting or type(window) is CycleSetting:
                         window.edit()
                         save_settings()
                         break
                     elif type(window) is Button:
                         os.system('termux-wake-lock')
                         window.action()
+                        send_notification('All timers done!')
                         os.system('termux-wake-unlock')
                         break
                     
@@ -466,6 +506,7 @@ finally:
     curses.curs_set(1)
     curses.endwin()
     curses.echo(True)
+    os.system(f'termux-notification-remove {NOTIF_ID}')
     os.system('termux-wake-unlock')
     traceback.print_exception(exc)
 

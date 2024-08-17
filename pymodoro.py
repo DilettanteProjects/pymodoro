@@ -214,7 +214,7 @@ def play_sound():
     """Play the alert sound/vibrate via terminal program"""
     volume = ptrVolumeLvl[0]
     silent = ptrSilentMode[0]
-    file = f'{PATH}/neg{VOLUMESTEPS[volume]}.mp3'
+    file = f'{PATH}/resources/vam-{VOLUMESTEPS[volume]}.mp3'
     vibratePattern = (2150,)
     if not silent:
         os.system(f'play-audio -s notification {file} &')

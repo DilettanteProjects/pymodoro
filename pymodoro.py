@@ -252,7 +252,7 @@ def play_sound():
     file = f'{PATH}/resources/vam-{VOLUMESTEPS[volume]}.mp3'
     vibratePattern = (2150,)
     if not silent:
-        os.system(f'play-audio -s notification {file} &')
+        os.system(f'play-audio -s system {file} &')
     else:
         i = 0
         while i < len(vibratePattern):
